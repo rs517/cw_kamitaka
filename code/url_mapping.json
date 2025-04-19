@@ -1,0 +1,26 @@
+[
+    {
+        "domain": "jp.mercari.com",
+        "site_name": "mercari"
+    },
+    {
+        "domain": "auctions.yahoo.co.jp",
+        "site_name": "yahauc"
+    },
+    {
+        "domain": "netmall.hardoff.co.jp",
+        "site_name": "hardoff"
+    },
+    {
+        "domain": "store.shopping.yahoo.co.jp",
+        "site_name": "yahoo_shopping"
+    },
+    {
+        "domain": "paypayfleamarket.yahoo.co.jp",
+        "site_name": "paypayfleamarket"
+    },
+    {
+        "domain": "item.fril.jp",
+        "site_name": "rakuma"
+    }
+]
