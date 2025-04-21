@@ -6,6 +6,7 @@ import re
 import json
 import os
 from pathlib import Path
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 # ロギングの基本設定を追加
 logging.basicConfig(
@@ -50,17 +51,32 @@ class YahaucSpider(BaseSpider):
                     f"Error scraping URL {i}/{total_urls} ({i/total_urls*100:.1f}%): {url} - {e}"
                 )
                 continue
-        logger.info(
-            f"Completed scraping {len(scraped_data)}/{total_urls} URLs ({len(scraped_data)/total_urls*100:.1f}% success rate)"
-        )
+        if total_urls > 0:
+            success_rate = len(scraped_data) / total_urls * 100
+            logger.info(
+                f"Completed scraping {len(scraped_data)}/{total_urls} URLs ({success_rate:.1f}% success rate)"
+            )
+        else:
+            logger.info(
+                f"No URLs to scrape. Completed with {len(scraped_data)} results."
+            )
         return scraped_data
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=15),
+        reraise=True,
+    )
     def _scrape(self, url):
-        soup = self._get_html(url)
-        # 出力ファイルパスを相対パスに変更
-        output_file = current_dir / "yahauc.html"
-        with open(output_file, "w", encoding="utf-8") as f:
-            f.write(soup.prettify())
+        try:
+            soup = self._get_html(url)
+        except Exception as e:
+            logger.error(f"Error scraping URL {url}: {e}")
+            try:
+                soup = self._session_sp_request(url)
+            except Exception as e:
+                raise e
+
         # A列.商品画像
         image_urls = self._extract_img_urls(soup)
 
@@ -210,5 +226,19 @@ class YahaucSpider(BaseSpider):
         """
         商品詳細情報を抽出(詳細ページ)
         """
-        item_desc = soup.select_one(".ProductExplanation__commentBody,#description")
-        return item_desc.text if item_desc else None
+        description = ""
+
+        section_dls = soup.select("section>dl")
+        for dl in section_dls:
+            dl_text = dl.get_text(strip=True)
+            description += f"{dl_text}\n"
+        script_tag = soup.select_one("#__NEXT_DATA__")
+        data = json.loads(script_tag.string)
+
+        # NOTE: 商品の詳細情報を取得
+        description_base = data["props"]["initialState"]["item"]["detail"][
+            "descriptionHtml"
+        ]
+        description += self.clean_html_text(description_base)
+
+        return description

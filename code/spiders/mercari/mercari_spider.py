@@ -49,9 +49,15 @@ class MercariSpider(BaseSpider):
                     f"Error scraping URL {i}/{total_urls} ({i/total_urls*100:.1f}%): {url} - {e}"
                 )
                 continue
-        logger.info(
-            f"Completed scraping {len(scraped_data)}/{total_urls} URLs ({len(scraped_data)/total_urls*100:.1f}% success rate)"
-        )
+        if total_urls > 0:
+            success_rate = len(scraped_data) / total_urls * 100
+            logger.info(
+                f"Completed scraping {len(scraped_data)}/{total_urls} URLs ({success_rate:.1f}% success rate)"
+            )
+        else:
+            logger.info(
+                f"No URLs to scrape. Completed with {len(scraped_data)} results."
+            )
         return scraped_data
 
     def determine_page_type(self, url: str) -> str:
